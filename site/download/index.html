@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Download — Airlock</title>
+<meta name="description" content="Get Airlock on Windows, Mac, Android and iPhone." />
+<meta name="theme-color" content="#111318" />
+<link rel="icon" href="/app/icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="/_shared.css" />
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/app/icon.svg" alt="" />Airlock</a>
+    <div class="links">
+      <a class="text" href="/#how">How it works</a>
+      <a class="text" href="/#install">Install</a>
+      <a class="btn primary small" href="/app/">Open Airlock</a>
+    </div>
+  </div>
+</nav>
+<main class="doc">
+
+<h1>Get Airlock</h1>
+<p class="lead">The web app is the fastest way in on every device. Windows users who want a real app that launches at startup can use the installer.</p>
+
+<h2 id="windows">Windows</h2>
+<div class="card">
+  <p><a class="btn primary" id="winBtn" href="/download/Airlock-Setup.exe">Download Airlock for Windows</a></p>
+  <p class="fine">One-click installer, about 90 MB. Installs to your user profile (no admin rights needed) and adds Start-menu and Desktop shortcuts. Windows SmartScreen may warn that the publisher is unknown because the app isn't code-signed yet; choose <b>More info → Run anyway</b>. Sign in with an email code; Google sign-in inside the desktop app is coming.</p>
+  <p class="fine" id="winNote" hidden>The installer is being uploaded — check back shortly, or use the web app below in the meantime.</p>
+</div>
+
+<h2>Mac</h2>
+<div class="card"><p>Open <a href="/app/">the app</a> in Safari and choose <b>File → Add to Dock</b> (macOS 14 or later), or in Chrome click <b>Install</b> in the address bar. It runs in its own window with its own Dock icon.</p></div>
+
+<h2>Android</h2>
+<div class="card"><p>Open <a href="/app/">the app</a> in Chrome or Firefox → menu → <b>Add to Home screen</b>.</p></div>
+
+<h2>iPhone / iPad</h2>
+<div class="card"><p>Open <a href="/app/">the app</a> in <b>Safari</b> → Share → <b>Add to Home Screen</b>. Other iPhone browsers can't install web apps.</p></div>
+
+<h2>Any browser</h2>
+<div class="card"><p>Or skip installing: <a href="/app/">airlock.neworbitdigital.com/app</a> works anywhere and remembers your sign-in.</p></div>
+<script>
+  // If the installer isn't published yet, say so instead of serving a 404.
+  fetch('/download/Airlock-Setup.exe', { method: 'HEAD' }).then(r => { if (!r.ok) { document.getElementById('winNote').hidden = false; document.getElementById('winBtn').classList.remove('primary'); } }).catch(() => {});
+</script>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© <span id="y"></span> New Orbit Digital</span>
+    <a href="/privacy/">Privacy</a>
+    <a href="/terms/">Terms</a>
+    <a href="mailto:justin@neworbitdigital.com">Support</a>
+    <a href="https://github.com/New-Orbit-Digital/airlock" rel="noopener">Open source (MIT)</a>
+    <span class="spacer"></span>
+    <a class="btn small" href="/app/">Open Airlock</a>
+  </div>
+</footer>
+<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+</html>

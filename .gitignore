@@ -1,0 +1,9 @@
+node_modules/
+dist/
+web/
+smoke.png
+*.png
+!icon.png
+!icon-180.png
+!build/icon.png
+!site/img/*.png

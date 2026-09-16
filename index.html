@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self' https://qaabxgldjluqyccwhjzf.supabase.co wss://qaabxgldjluqyccwhjzf.supabase.co" />
+<meta name="theme-color" content="#111318" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Airlock" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<title>Airlock</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #1a1d24;
+    --panel-2: #21252e;
+    --border: #2c313c;
+    --text: #e6e8ee;
+    --muted: #8b93a5;
+    --accent: #6ea8fe;
+    --q1: #e5534b; /* do */
+    --q2: #3fb950; /* schedule */
+    --q3: #d29922; /* delegate */
+    --q4: #6e7681; /* eliminate */
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input, textarea { font: inherit; color: inherit; }
+
+  /* ---------- capture bar ---------- */
+  #capture {
+    display: flex; gap: 8px; align-items: center;
+    padding: 14px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  #capture input[type=text] {
+    flex: 1; padding: 10px 12px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--radius); outline: none;
+  }
+  #capture input[type=text]:focus { border-color: var(--accent); }
+  .toggle {
+    padding: 9px 14px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--muted); user-select: none;
+  }
+  .toggle[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: #24324a; }
+  .toggle kbd { font-size: 11px; color: var(--muted); margin-left: 6px; }
+  #add {
+    padding: 9px 16px; border-radius: var(--radius); border: none;
+    background: var(--accent); color: #0b1424; font-weight: 600;
+  }
+
+  /* ---------- filter bar ---------- */
+  #filters {
+    display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel);
+  }
+  #filters .label { color: var(--muted); margin-right: 4px; }
+  .chip {
+    padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 13px;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #0b1424; }
+  .chip .count { opacity: .7; margin-left: 4px; }
+  #filters .spacer { flex: 1; }
+  label.check { color: var(--muted); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+
+  /* ---------- matrix ---------- */
+  #matrix {
+    flex: 1; display: grid; gap: 10px; padding: 12px 16px 16px;
+    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-height: 0;
+  }
+  .quad {
+    display: flex; flex-direction: column; min-height: 0;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    border-top: 3px solid var(--qc);
+  }
+  .quad header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 10px 12px 6px;
+  }
+  .quad h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--qc); }
+  .quad h2 span { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .quad .n { color: var(--muted); font-size: 12px; }
+  .quad .list { overflow-y: auto; padding: 0 8px 8px; flex: 1; }
+  .quad .empty { color: var(--muted); font-size: 13px; padding: 8px 6px; opacity: .6; }
+  #q1 { --qc: var(--q1); } #q2 { --qc: var(--q2); } #q3 { --qc: var(--q3); } #q4 { --qc: var(--q4); }
+
+  .task {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 8px 10px; margin: 4px 0; border-radius: 6px;
+    background: var(--panel-2); border: 1px solid transparent; cursor: pointer;
+  }
+  .task:hover { border-color: var(--border); }
+  .task input[type=checkbox] { margin-top: 3px; accent-color: var(--qc); cursor: pointer; }
+  .task .body { flex: 1; min-width: 0; }
+  .task .title { word-wrap: break-word; }
+  .task.done .title { text-decoration: line-through; color: var(--muted); }
+  .task .tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+  .tag { font-size: 11px; color: var(--accent); background: #1c2536; padding: 1px 7px; border-radius: 999px; }
+  .task .note-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); margin-top: 8px; }
+
+  /* ---------- dialog ---------- */
+  dialog {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0; width: 560px; max-width: 92vw;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog form { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; }
+  dialog .row { display: flex; gap: 8px; align-items: center; }
+  dialog .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  dialog input[type=text], dialog textarea {
+    width: 100%; padding: 9px 10px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--radius); outline: none;
+  }
+  dialog input[type=text]:focus, dialog textarea:focus { border-color: var(--accent); }
+  dialog textarea { min-height: 160px; resize: vertical; }
+  dialog .actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+  dialog .actions .spacer { flex: 1; }
+  .btn { padding: 8px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--panel-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #0b1424; font-weight: 600; }
+  .btn.danger { color: #ff7b72; }
+  .meta { font-size: 12px; color: var(--muted); }
+
+  /* ---------- hashtag suggestions ---------- */
+  .suggest {
+    position: fixed; z-index: 50; min-width: 180px; max-height: 220px; overflow-y: auto;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); padding: 4px; display: none;
+  }
+  .suggest.open { display: block; }
+  .suggest .item { padding: 6px 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; }
+  .suggest .item .count { color: var(--muted); font-size: 12px; }
+  .suggest .item.active, .suggest .item:hover { background: #24324a; }
+  .suggest .none { padding: 6px 10px; color: var(--muted); font-size: 12px; }
+
+  /* ---------- drag & drop ---------- */
+  .task.dragging { opacity: .4; }
+  .quad.drop { background: #1f2633; border-color: var(--qc); }
+
+  /* ---------- login ---------- */
+  #login {
+    position: fixed; inset: 0; z-index: 100; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #login[hidden] { display: none; }
+  #login form {
+    width: 340px; max-width: 90vw; display: flex; flex-direction: column; gap: 10px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+  }
+  #login h1 { margin: 0 0 6px; font-size: 18px; }
+  #login input { padding: 11px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); outline: none; }
+  #login input:focus { border-color: var(--accent); }
+  #login input.code { font-size: 24px; letter-spacing: 8px; text-align: center; }
+  #login .err { color: #ff7b72; font-size: 13px; min-height: 18px; }
+  #login .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  #login .brand img { width: 36px; height: 36px; border-radius: 8px; }
+  #login .brand h1 { margin: 0; font-size: 20px; }
+  #login .sub { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+  #login .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+  #login .or::before, #login .or::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+  #login .google { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border: none; }
+  #login .google svg { width: 18px; height: 18px; }
+  #login .fine { color: var(--muted); font-size: 11px; text-align: center; margin: 6px 0 0; }
+  #login .fine a { color: var(--muted); }
+  #login .link { background: none; border: none; color: var(--accent); padding: 0; font-size: 13px; align-self: flex-start; }
+  #login [hidden] { display: none !important; }
+
+  /* ---------- menu ---------- */
+  #menuBtn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); padding: 6px 10px; }
+  #menu {
+    position: fixed; right: 16px; top: 110px; z-index: 60; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #menu[hidden] { display: none; }
+  #menu label, #menu button { text-align: left; padding: 6px 8px; border-radius: 6px; background: transparent; border: none; color: var(--text); display: flex; gap: 8px; align-items: center; }
+  #menu button:hover, #menu label:hover { background: #24324a; }
+  #menu .meta { padding: 4px 8px; }
+  #menu .who { padding: 4px 8px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; font-size: 12px; color: var(--muted); word-break: break-all; }
+  #menu .danger { color: #ff7b72; }
+  #menu a { color: var(--muted); font-size: 12px; padding: 4px 8px; text-decoration: none; }
+
+  /* ---------- first-run hint ---------- */
+  #hint { margin: 12px 16px 0; background: var(--panel); border: 1px dashed var(--border); border-radius: var(--radius); padding: 14px 16px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+  #hint[hidden] { display: none; }
+  #hint b { color: var(--text); }
+  #hint code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; color: var(--accent); }
+
+  #sync { font-size: 11px; color: var(--muted); }
+  #sync[data-state="error"], #sync[data-state="offline"] { color: #d29922; }
+
+  /* ---------- phone layout ---------- */
+  @media (max-width: 700px) {
+    /* the page scrolls as one growing list; panels size to their content */
+    html, body { height: auto; min-height: 100%; overflow: auto; }
+    body { display: block; }
+    #capture { flex-wrap: wrap; padding: 10px; }
+    #capture input[type=text] { flex-basis: 100%; }
+    .toggle kbd { display: none; }
+    #matrix { display: block; flex: none; min-height: 0; padding: 10px; }
+    .quad { display: block; height: auto; min-height: 0; margin-bottom: 10px; }
+    .quad .list { overflow: visible; flex: none; }
+    .quad .empty { padding-bottom: 12px; }
+    .suggest { max-height: 160px; }
+    #filters .label { display: none; }
+    #status { display: none; }
+  }
+
+  /* ---------- install banner (PWA) ---------- */
+  #installBar {
+    display: flex; gap: 10px; align-items: center; padding: 8px 16px; font-size: 13px;
+    background: #1c2536; color: var(--text); border-bottom: 1px solid var(--border);
+  }
+  #installBar[hidden] { display: none; }
+  #installBar .msg { flex: 1; }
+  #installBar .msg b { color: var(--accent); }
+  #installBar button { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel-2); font-size: 12px; }
+  #installBar button.primary { background: var(--accent); border-color: var(--accent); color: #0b1424; font-weight: 600; }
+
+  #status { position: fixed; bottom: 8px; right: 12px; font-size: 11px; color: var(--muted); opacity: .7; }
+</style>
+</head>
+<body>
+
+<div id="capture">
+  <input id="text" type="text" autofocus placeholder='Add a task… use #hashtags for the realm, e.g. "Send Q3 invoices #work"' />
+  <button class="toggle" id="tImportant" aria-pressed="false">Important <kbd>Ctrl+I</kbd></button>
+  <button class="toggle" id="tUrgent" aria-pressed="false">Urgent <kbd>Ctrl+U</kbd></button>
+  <button id="add">Add</button>
+</div>
+
+<div id="installBar" hidden>
+  <span class="msg" id="installMsg"></span>
+  <button class="primary" id="installGo" hidden>Install</button>
+  <button id="installLater">Not now</button>
+</div>
+
+<div id="filters">
+  <span class="label">Realm:</span>
+  <div id="chips" style="display:contents"></div>
+  <span class="spacer"></span>
+  <label class="check"><input type="checkbox" id="showDone" /> Show done</label>
+  <span id="sync"></span>
+  <button id="menuBtn" title="Menu">⋯</button>
+</div>
+<div id="menu" hidden>
+  <div class="who" id="who"></div>
+  <label id="startupRow" hidden><input type="checkbox" id="startup" /> Launch at startup</label>
+  <button id="installMenu" hidden>Install Airlock on this device</button>
+  <button id="exportBtn">Export my tasks (JSON)</button>
+  <button id="signOut">Sign out</button>
+  <button id="deleteBtn" class="danger">Delete my account…</button>
+  <a id="privacyLink" href="#" target="_blank" rel="noopener">Privacy</a>
+  <span class="meta" id="version"></span>
+</div>
+
+<div id="hint" hidden><b>Welcome to Airlock.</b> Type a task above and press Enter. Add <code>#realm</code> tags to sort by area of life (<code>#work</code>, <code>#home</code>…), and flip <b>Important</b> / <b>Urgent</b> before you add — the task lands in the right quadrant automatically. Click a card for notes; drag it to move it.</div>
+
+<div id="matrix">
+  <section class="quad" id="q1"><header><h2>Do <span>urgent · important</span></h2><span class="n"></span></header><div class="list"></div></section>
+  <section class="quad" id="q2"><header><h2>Schedule <span>important · not urgent</span></h2><span class="n"></span></header><div class="list"></div></section>
+  <section class="quad" id="q3"><header><h2>Delegate <span>urgent · not important</span></h2><span class="n"></span></header><div class="list"></div></section>
+  <section class="quad" id="q4"><header><h2>Eliminate <span>neither</span></h2><span class="n"></span></header><div class="list"></div></section>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog">
+    <div class="field"><label>Task</label><input type="text" id="dTitle" /></div>
+    <div class="field"><label>Realms (hashtags)</label><input type="text" id="dTags" placeholder="#work #home" /></div>
+    <div class="row">
+      <button type="button" class="toggle" id="dImportant" aria-pressed="false">Important</button>
+      <button type="button" class="toggle" id="dUrgent" aria-pressed="false">Urgent</button>
+      <span class="spacer" style="flex:1"></span>
+      <span class="meta" id="dMeta"></span>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="dNotes" placeholder="Anything useful…"></textarea></div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="dDelete">Delete</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="dDone">Mark done</button>
+      <button type="submit" class="btn primary" id="dSave">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="status"></div>
+
+<div id="login" hidden>
+  <form id="loginForm">
+    <div class="brand"><img src="icon.svg" alt="" /><h1>Airlock</h1></div>
+    <p class="sub">Catch passing tasks. Sort them later.</p>
+    <button type="button" class="btn google" id="googleBtn">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6C12.3 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.6-2 15.4-5.6l-7.5-5.8c-2.1 1.4-4.8 2.3-7.9 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.8 6C6.5 42.6 14.6 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <div class="or" id="orRow">or use your email</div>
+    <div id="emailStep">
+      <input id="lEmail" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email" required style="width:100%" />
+    </div>
+    <div id="codeStep" hidden>
+      <p class="sub" id="codeSub"></p>
+      <input id="lCode" class="code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="one-time-code" placeholder="123456" style="width:100%" />
+    </div>
+    <div class="err" id="lError"></div>
+    <button class="btn primary" type="submit" id="lSubmit">Send me a code</button>
+    <button type="button" class="link" id="lBack" hidden>Use a different email</button>
+    <p class="fine">Signing in creates your account. <a id="privacyLink2" href="#" target="_blank" rel="noopener">Privacy</a></p>
+  </form>
+</div>
+
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="store.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>

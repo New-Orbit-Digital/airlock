@@ -1,0 +1,14 @@
+{
+	// Hosted on Cloudflare Pages (project "airlock") because the neworbitdigital.com zone is
+	// managed by Squarespace, so a Workers custom domain can't attach. Pages takes a plain CNAME.
+	"name": "airlock",
+	"compatibility_date": "2026-09-01",
+	"pages_build_output_dir": "./web",
+	"r2_buckets": [
+		{
+			"bucket_name": "airlock-downloads",
+			"binding": "DOWNLOADS",
+			"remote": true
+		}
+	]
+}

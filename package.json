@@ -1,0 +1,72 @@
+{
+  "name": "airlock",
+  "version": "0.5.2",
+  "description": "Airlock \u2014 catch passing tasks, sort them in an Eisenhower matrix. Syncs across devices.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "electron smoke-test.js",
+    "dist": "electron-builder --win nsis",
+    "web": "node build-web.js",
+    "deploy": "node build-web.js && npx wrangler pages deploy web --project-name airlock --branch main --commit-dirty=true",
+    "publish:installer": "node publish-installer.js"
+  },
+  "author": "Justin",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "@supabase/supabase-js": "^2.116.0",
+    "wrangler": "^4.133.0"
+  },
+  "dependencies": {},
+  "build": {
+    "appId": "com.neworbitdigital.airlock",
+    "productName": "Airlock",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "store.js",
+      "config.js",
+      "icon.png",
+      "icon.svg",
+      "icon-180.png",
+      "vendor/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true,
+      "shortcutName": "Airlock"
+    },
+    "protocols": [
+      {
+        "name": "Airlock",
+        "schemes": [
+          "airlock"
+        ]
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/New-Orbit-Digital/airlock"
+  }
+}
