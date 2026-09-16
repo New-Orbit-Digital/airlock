@@ -71,7 +71,8 @@
       {
         "provider": "github",
         "owner": "New-Orbit-Digital",
-        "repo": "airlock"
+        "repo": "airlock",
+        "releaseType": "release"
       }
     ]
   },
