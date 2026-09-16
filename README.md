@@ -34,7 +34,17 @@ custom SMTP via Resend, redirect URLs) — see the project scope doc.
     npm install
     npm start                 # dev
     npm run dist              # dist/Airlock Setup x.y.z.exe (one-click installer; run from an Administrator PowerShell the first time)
-"Launch at startup" lives in the ⋯ menu.
+    npm run release           # builds AND publishes a GitHub Release so installed apps auto-update (needs $env:GH_TOKEN)
+"Launch at startup" and "Check for updates" live in the ⋯ menu.
+
+### Auto-update (how installed desktop apps get new versions)
+The app uses `electron-updater` against GitHub Releases on `New-Orbit-Digital/airlock`. On launch (+15 s) and every 4 h it
+checks `latest.yml`, downloads silently, then shows a "Restart to update" bar; it also installs on quit. To ship a version:
+1. bump `"version"` in package.json (auto-update only moves forward),
+2. `$env:GH_TOKEN = "<GitHub personal access token with repo scope>"` (classic token, or fine-grained with Contents: read/write on this repo),
+3. `npm run release` from an Administrator PowerShell → creates a draft-free release `vX.Y.Z` with the installer, `latest.yml` and blockmap.
+Then `npm run publish:installer` to refresh the site's download link, and `npm run deploy` for the web/PWA (which updates itself on next open).
+The app is unsigned; electron-updater tolerates that but Windows shows the SmartScreen prompt on first install only.
 
 ## Web / phone
     npm run deploy            # builds web/ (site/ + app at /app/) and deploys to Cloudflare Pages project "airlock" (airlock-ahd.pages.dev)
@@ -77,4 +87,5 @@ Guards: title ≤ 500 chars, notes ≤ 20k, ≤ 20 tags, ≤ 20,000 tasks per us
 - v0.5.0 (2026-09-16): public site added (landing/privacy/terms/download, screenshots generated from the app with sample data); app moved to `/app/` (manifest scope, root SW self-unregister, `_redirects`); email-code box accepts 6–10 digits with no auto-submit (Justin's live code was longer than 6); R2 download worker + publish script. Smoke test re-run: PASS, no console errors. Landing rendered at 1280px and reviewed.
 - v0.5.1 (2026-09-16): desktop Google sign-in via system browser + `airlock://` deep link. Smoke test: Google button visible on desktop, click hands a Google URL to `shell.openExternal` (stubbed), a bad deep-link code is rejected, a good one signs in (`google-user@example.com`). PASS, no console errors.
 - v0.5.2 (2026-09-16): landing copy revised ("Capture now. Decide later.", space-themed quadrant cards, merged sync/offline card, "In a browser", open-source callouts + LICENSE (MIT), support address justin@neworbitdigital.com); hero screenshot regenerated at 910px; **app bug fixed**: first-run hint was a grid item and squashed the quadrants — moved above the grid. Landing re-rendered at 1280px and reviewed.
-- Not yet verified (needs Justin's devices): live Google sign-in on web, live email-code delivery via Resend, the Magic Link template edit, custom-domain deploy.
+- v0.6.0 (2026-09-16): theme toggle (dark/light, persisted, follows OS on first run), quiet theme-aware scrollbars, circle tick that draws a check and lets the card linger ~1.6 s before it leaves, "Show done" moved into the ⋯ menu, menu `hidden` bug fixed (desktop-only / web-only items were leaking through `display:flex`), Install item opens `/download/` where no native prompt exists, electron-updater wired to GitHub Releases with Restart-to-update bar and "Check for updates". Smoke test adds: tick lingers then completes, theme persists, menu hides web-only items on desktop. PASS, no console errors. Light theme rendered and reviewed.
+- Not yet verified (needs Justin's devices): auto-update end to end (needs two published releases), live Google sign-in on web, live email-code delivery via Resend, the Magic Link template edit, custom-domain deploy.

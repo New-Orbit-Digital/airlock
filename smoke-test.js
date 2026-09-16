@@ -109,6 +109,19 @@ app.whenReady().then(async () => {
   for (let i = 0; i < 20; i++) { await sleep(300); rt = await run(`[...document.querySelectorAll('#q3 .task .title')].some(t => t.textContent === 'Realtime ${RUN}')`); if (rt) break; }
   checks.realtimeArrived = rt;
 
+  // 7b. circle tick: click draws the check, card lingers ~1.6s, then the task is done
+  await run(`document.querySelector('#showDone').checked = false; document.querySelector('#showDone').dispatchEvent(new Event('change'));`);
+  await run(`document.querySelector('#q3 .task .tick').click()`);
+  await sleep(400);
+  checks.tickLingers = await run(`!!document.querySelector('#q3 .task.leaving .tick.on')`);
+  await sleep(1800);
+  checks.tickCompleted = await run(`document.querySelectorAll('#q3 .task').length === 0 && window.matrixStore.tasks.some(t => t.title === 'Realtime ${RUN}' && t.done)`);
+  // 7c. theme toggle persists
+  await run(`document.querySelector('#themeLight').click()`);
+  checks.themeLight = await run(`document.documentElement.dataset.theme === 'light' && localStorage.getItem('airlock.theme') === 'light'`);
+  await run(`document.querySelector('#themeDark').click()`);
+  checks.menuHidesWebOnlyItems = await run(`getComputedStyle(document.querySelector('#installMenu')).display === 'none' && getComputedStyle(document.querySelector('#startupRow')).display !== 'none'`);
+
   // 8. export contains the tasks
   checks.exportHasTasks = await run(`JSON.parse(window.matrixStore.exportJSON()).tasks.length >= 3`);
 
@@ -153,7 +166,7 @@ app.whenReady().then(async () => {
     && dnd.important === true && dnd.urgent === false && JSON.stringify(checks.afterDndCounts) === '[0,1,0,1]'
     && JSON.stringify(checks.afterDoneCounts) === '[0,0,0,1]' && checks.syncStatus === 'synced'
     && checks.remoteRows.length === 2 && checks.remoteRows.some((r) => r.title === `Smoke ${RUN} do` && r.important && !r.urgent && r.done && r.notes === `note ${RUN}`)
-    && checks.realtimeArrived && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
+    && checks.realtimeArrived && checks.tickLingers && checks.tickCompleted && checks.themeLight && checks.menuHidesWebOnlyItems && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
     && checks.bobOwnRowScoped && checks.deleteRemovedOnlyBob && checks.signedOutAfterDelete
     && checks.desktopGoogleOpenedBrowser && checks.deepLinkBadCodeRejected && checks.deepLinkSignedIn === 'google-user@example.com' && errors.length === 0;
   console.log(JSON.stringify(checks, null, 2));

@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
+const { autoUpdater } = require('electron-updater');
 
 // airlock:// deep link — Google sign-in runs in the system browser and returns here.
 const PROTOCOL = 'airlock';
@@ -61,6 +62,27 @@ if (!app.requestSingleInstanceLock()) {
   });
   ipcMain.handle('desktop:version', () => app.getVersion());
   ipcMain.handle('desktop:openExternal', (_e, url) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return true; });
+
+  // ---- auto-update from GitHub Releases (New-Orbit-Digital/airlock). Silent download, restart on demand. ----
+  let updateReady = null;
+  const sendUpdate = (state, extra = {}) => { if (win) win.webContents.send('desktop:update', { state, ...extra }); };
+  if (app.isPackaged) {
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('checking-for-update', () => sendUpdate('checking'));
+    autoUpdater.on('update-available', (i) => sendUpdate('downloading', { version: i.version }));
+    autoUpdater.on('update-not-available', () => sendUpdate('none'));
+    autoUpdater.on('update-downloaded', (i) => { updateReady = i.version; sendUpdate('ready', { version: i.version }); });
+    autoUpdater.on('error', (e) => sendUpdate('error', { message: String(e && e.message || e) }));
+    const check = () => autoUpdater.checkForUpdates().catch(() => {});
+    app.whenReady().then(() => { setTimeout(check, 15000); setInterval(check, 4 * 60 * 60 * 1000); });
+  }
+  ipcMain.handle('desktop:checkForUpdates', async () => {
+    if (!app.isPackaged) return { state: 'dev' };
+    try { await autoUpdater.checkForUpdates(); return { state: updateReady ? 'ready' : 'checked', version: updateReady }; }
+    catch (e) { return { state: 'error', message: String(e && e.message || e) }; }
+  });
+  ipcMain.handle('desktop:installUpdate', () => { if (updateReady) setImmediate(() => autoUpdater.quitAndInstall()); return !!updateReady; });
 
   app.whenReady().then(() => {
     createWindow();

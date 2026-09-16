@@ -7,4 +7,7 @@ contextBridge.exposeInMainWorld('desktop', {
   version: () => ipcRenderer.invoke('desktop:version'),
   openExternal: (url) => ipcRenderer.invoke('desktop:openExternal', url),
   onDeepLink: (cb) => ipcRenderer.on('desktop:deeplink', (_e, url) => cb(url)),
+  checkForUpdates: () => ipcRenderer.invoke('desktop:checkForUpdates'),
+  installUpdate: () => ipcRenderer.invoke('desktop:installUpdate'),
+  onUpdate: (cb) => ipcRenderer.on('desktop:update', (_e, info) => cb(info)),
 });

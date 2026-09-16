@@ -18,6 +18,8 @@ const el = {
   menu: $('#menu'), menuBtn: $('#menuBtn'), who: $('#who'), signOut: $('#signOut'), exportBtn: $('#exportBtn'), deleteBtn: $('#deleteBtn'),
   startup: $('#startup'), startupRow: $('#startupRow'), version: $('#version'), hint: $('#hint'),
   installBar: $('#installBar'), installMsg: $('#installMsg'), installGo: $('#installGo'), installLater: $('#installLater'), installMenu: $('#installMenu'),
+  themeDark: $('#themeDark'), themeLight: $('#themeLight'), updateBar: $('#updateBar'), updateMsg: $('#updateMsg'), updateGo: $('#updateGo'), updateLater: $('#updateLater'),
+  updateCheck: $('#updateCheck'), updateStatus: $('#updateStatus'),
 };
 
 // ---------- helpers ----------
@@ -203,9 +205,16 @@ function taskCard(t) {
   card.className = 'task' + (t.done ? ' done' : '');
   card.draggable = true;
   card.dataset.id = t.id;
-  const cb = document.createElement('input');
-  cb.type = 'checkbox'; cb.checked = t.done; cb.title = t.done ? 'Reopen' : 'Mark done';
-  cb.addEventListener('click', (e) => { e.stopPropagation(); toggleDone(t); });
+  const cb = document.createElement('button');
+  cb.type = 'button'; cb.className = 'tick'; cb.title = t.done ? 'Reopen' : 'Mark done'; cb.setAttribute('aria-label', cb.title);
+  cb.innerHTML = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 6.5 L4.5 9.5 L10.5 2.5"/></svg>';
+  cb.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (t.done || card.classList.contains('leaving')) { toggleDone(t); return; }
+    // draw the check, let it sit for a beat, then the card fades and the task is marked done
+    cb.classList.add('on'); card.classList.add('leaving');
+    setTimeout(() => { if (document.body.contains(card)) toggleDone(t); }, 1600);
+  });
   const body = document.createElement('div'); body.className = 'body';
   const title = document.createElement('div'); title.className = 'title'; title.textContent = t.title;
   body.appendChild(title);
@@ -350,6 +359,17 @@ if (desk) {
 }
 for (const a of document.querySelectorAll('#privacyLink, #privacyLink2')) a.href = window.MATRIX_CONFIG.privacyUrl;
 
+// ---------- theme ----------
+function applyTheme(mode) {
+  document.documentElement.dataset.theme = mode;
+  setPressed(el.themeDark, mode === 'dark'); setPressed(el.themeLight, mode === 'light');
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = mode === 'light' ? '#f4f5f8' : '#111318';
+  try { localStorage.setItem('airlock.theme', mode); } catch {}
+}
+el.themeDark.addEventListener('click', () => applyTheme('dark'));
+el.themeLight.addEventListener('click', () => applyTheme('light'));
+(() => { let m = 'dark'; try { m = localStorage.getItem('airlock.theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); } catch {} applyTheme(m); })();
+
 // ---------- account menu ----------
 el.menuBtn.addEventListener('click', (e) => { e.stopPropagation(); el.menu.hidden = !el.menu.hidden; });
 document.addEventListener('click', (e) => { if (!el.menu.contains(e.target)) el.menu.hidden = true; });
@@ -396,9 +416,9 @@ store.on('auth', (user) => {
 });
 
 // ---------- install prompts (web only) ----------
-// Android/desktop browsers fire beforeinstallprompt; iOS Safari never does, so it gets a one-time hint.
+// Chrome/Edge/Android Chrome fire beforeinstallprompt; everywhere else the menu item opens the install guide.
 (function installPrompts() {
-  if (desk || !location.protocol.startsWith('http')) return;
+  if (desk) return;                                   // the desktop app is already installed
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   if (standalone) return;
   const KEY = 'airlock.installHint.dismissed';
@@ -407,32 +427,29 @@ store.on('auth', (user) => {
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isSafari = /safari/i.test(navigator.userAgent) && !/crios|fxios|chrome|android/i.test(navigator.userAgent);
   let deferred = null;
+  el.installMenu.hidden = false;
 
   const showBar = (msg, canInstall) => {
     if (dismissed || !store.user) return;
-    el.installMsg.innerHTML = msg;
-    el.installGo.hidden = !canInstall;
-    el.installBar.hidden = false;
+    el.installMsg.innerHTML = msg; el.installGo.hidden = !canInstall; el.installBar.hidden = false;
   };
   const dismiss = () => { dismissed = true; el.installBar.hidden = true; try { localStorage.setItem(KEY, '1'); } catch {} };
   el.installLater.addEventListener('click', dismiss);
 
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferred = e;
-    el.installMenu.hidden = false;
+    e.preventDefault(); deferred = e;
     showBar('Install <b>Airlock</b> for a home-screen icon and full-screen capture.', true);
   });
   const doInstall = async () => {
-    if (!deferred) return;
+    if (!deferred) { window.open('/download/', '_blank', 'noopener'); return; }   // no native prompt here → guide
     deferred.prompt();
     const { outcome } = await deferred.userChoice;
-    deferred = null; el.installMenu.hidden = true;
+    deferred = null;
     if (outcome === 'accepted') dismiss(); else el.installBar.hidden = true;
   };
   el.installGo.addEventListener('click', doInstall);
   el.installMenu.addEventListener('click', () => { el.menu.hidden = true; doInstall(); });
-  window.addEventListener('appinstalled', dismiss);
+  window.addEventListener('appinstalled', () => { dismiss(); el.installMenu.hidden = true; });
 
   if (isIOS) {
     const msg = isSafari
@@ -441,6 +458,27 @@ store.on('auth', (user) => {
     store.on('auth', (u) => { if (u) setTimeout(() => showBar(msg, false), 1500); });
   }
 })();
+
+// ---------- desktop auto-update ----------
+if (desk) {
+  el.updateCheck.hidden = false;
+  const setStatus = (t) => { el.updateStatus.textContent = t; el.updateStatus.hidden = !t; };
+  desk.onUpdate((info) => {
+    if (info.state === 'ready') { el.updateMsg.innerHTML = `Airlock <b>${info.version}</b> is downloaded.`; el.updateBar.hidden = false; setStatus(`Version ${info.version} ready — restart to install`); }
+    else if (info.state === 'downloading') setStatus(`Downloading ${info.version}…`);
+    else if (info.state === 'none') setStatus('You have the latest version');
+    else if (info.state === 'error') setStatus('Update check failed — will retry later');
+  });
+  el.updateGo.addEventListener('click', () => desk.installUpdate());
+  el.updateLater.addEventListener('click', () => { el.updateBar.hidden = true; });
+  el.updateCheck.addEventListener('click', async () => {
+    setStatus('Checking…');
+    const r = await desk.checkForUpdates();
+    if (r.state === 'dev') setStatus('Updates only apply to the installed app');
+    else if (r.state === 'ready') setStatus(`Version ${r.version} ready — restart to install`);
+    else if (r.state === 'error') setStatus('Update check failed — will retry later');
+  });
+}
 
 // ---------- boot ----------
 render();
