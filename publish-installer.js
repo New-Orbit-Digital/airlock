@@ -21,8 +21,17 @@ const sh = (cmd, capture = false) => {
 };
 
 console.log(`\nPublishing ${exe.f} (${(fs.statSync(src).size / 1048576).toFixed(0)} MB)\n`);
-for (const key of ['Airlock-Setup.exe', `Airlock-Setup-${version}.exe`])
-  sh(`npx wrangler r2 object put "airlock-downloads/${key}" --file "${src}" --content-type application/octet-stream --remote`);
+// R2 upload with retries: the API occasionally answers 524 on a 78 MB put. The stable key must succeed
+// (it is what the site's download button serves); the versioned archive copy is best-effort.
+const put = (key, attempts) => {
+  for (let i = 1; i <= attempts; i++) {
+    try { sh(`npx wrangler r2 object put "airlock-downloads/${key}" --file "${src}" --content-type application/octet-stream --remote`); return true; }
+    catch (e) { console.warn(`upload of ${key} failed (attempt ${i}/${attempts})`); }
+  }
+  return false;
+};
+if (!put('Airlock-Setup.exe', 3)) { console.error('Could not upload the installer to R2.'); process.exit(1); }
+if (!put(`Airlock-Setup-${version}.exe`, 2)) console.warn('Versioned copy skipped; the download link is unaffected.');
 
 const out = sh('npx wrangler deploy -c download-worker/wrangler.jsonc', true);
 process.stdout.write(out);
