@@ -57,6 +57,9 @@ in Squarespace's DNS panel (the zone is Squarespace-managed, so Workers custom d
 Android: Chrome/Firefox → Add to Home screen. iPhone: Safari → Share → Add to Home Screen. Mac: Safari → Add to Dock, or Chrome → Install.
 Drag-and-drop is mouse-only; on the phone, move a card by opening it and flipping Important/Urgent.
 
+## Renaming quadrants
+Double-click (double-tap on phones) a quadrant title. Type a name or hit the dice for a suggestion; Enter or clicking away saves, Esc cancels, clearing it restores the default. Names sync to all your devices (`matrix_settings`, one row per user).
+
 ## Account menu (⋯)
 Signed-in email · Launch at startup (desktop) · Export my tasks (JSON) · Sign out · Delete my account (type DELETE) · Privacy · version.
 Delete calls `public.delete_my_account()`; for the owner account (shared with the Inbox app) it deletes Airlock data but keeps the login.
@@ -92,4 +95,5 @@ Guards: title ≤ 500 chars, notes ≤ 20k, ≤ 20 tags, ≤ 20,000 tasks per us
 - v0.6.1 (2026-09-17): `airlock-ping.wav` (Justin's) plays when a task is added and when one is marked done (tick or dialog; not on reopen), volume 0.6, preloaded; "Mute sounds" toggle in the ⋯ menu, persisted in `localStorage` (`airlock.mute`). Shipped in the installer (`build.files`), web (`/app/airlock-ping.wav`), SW cache (`airlock-shell-v8`), CSP `media-src 'self'`. Smoke test adds: two adds → two `play()` calls; muted tick → zero. PASS, no console errors.
 - v0.6.1 release (2026-09-17): `npm run release` published v0.6.1 directly (no draft); installed 0.6.0 desktop app reported and applied the update (Justin). **Auto-update verified end to end.**
 - v0.6.2 (2026-09-17, web-only fix): iPhone home-screen app — capture bar, menu, login overlay and status line now respect `env(safe-area-inset-*)` (the input was sliding under the status bar with `viewport-fit=cover` + `black-translucent`). SW cache `airlock-shell-v9`. Rendered at 390×844 with a simulated 47px inset and reviewed.
+- v0.6.3 (2026-09-17): quadrant renaming — double-click (or double-tap) a quadrant title to edit it inline; dice button cycles suggestions per quadrant; Enter/click-away commits, Esc reverts, empty restores the default. Names are per user and synced across devices via new table `public.matrix_settings` (RLS, realtime, cleared by `delete_my_account()`), cached in `localStorage airlock.quads.v1`. Removed the bottom-right "x open · x done" line. Smoke test adds: dblclick opens input with current name, dice changes it, Enter commits + writes the settings row, a second client's upsert renames another quadrant live, Esc reverts, `#status` gone. PASS, no console errors. Edit mode rendered at 1100px and reviewed.
 - Not yet verified: live Google sign-in on web, live email-code delivery via Resend, the Magic Link template edit, custom-domain deploy.

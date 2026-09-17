@@ -121,6 +121,23 @@ app.whenReady().then(async () => {
   checks.tickLingers = await run(`!!document.querySelector('#q3 .task.leaving .tick.on')`);
   await sleep(1800);
   checks.tickCompleted = await run(`document.querySelectorAll('#q3 .task').length === 0 && window.matrixStore.tasks.some(t => t.title === 'Realtime ${RUN}' && t.done)`);
+  // 7d. quadrant rename: dblclick → input, dice suggests, Enter commits, synced row written, second-device change arrives
+  await run(`document.querySelector('#q3 h2 .name').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); true;`);
+  checks.renameOpensInput = await run(`!!document.querySelector('#q3 h2 .name.editing input') && document.querySelector('#q3 h2 .name input').value === 'Delegate'`);
+  await run(`document.querySelector('#q3 h2 .name .dice').click(); true;`);
+  checks.diceSuggests = await run(`(() => { const v = document.querySelector('#q3 h2 .name input').value; return v && v !== 'Delegate'; })()`);
+  await run(`{ const i = document.querySelector('#q3 h2 .name input'); i.value = 'Automate'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); } true;`);
+  await sleep(200);
+  checks.renameCommitted = await run(`document.querySelector('#q3 h2 .name').textContent === 'Automate' && !document.querySelector('#q3 h2 .name.editing')`);
+  checks.renameSynced = await run(`[...window.__fakeSupabase.tables.matrix_settings.values()].some(r => r.quad_names && r.quad_names.q3 === 'Automate')`);
+  await run(`(async () => { const sb2 = window.supabase.createClient(); const uid = window.__fakeSupabase.session.user.id;
+    await sb2.from('matrix_settings').upsert({ user_id: uid, quad_names: { q3: 'Automate', q4: 'Reconsider' }, updated_at: new Date(Date.now() + 1000).toISOString() }); })()`);
+  await sleep(300);
+  checks.renameRealtime = await run(`document.querySelector('#q4 h2 .name').textContent === 'Reconsider'`);
+  await run(`document.querySelector('#q4 h2 .name').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    { const i = document.querySelector('#q4 h2 .name input'); i.value = ''; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } true;`);
+  checks.escapeReverts = await run(`document.querySelector('#q4 h2 .name').textContent === 'Reconsider'`);
+  checks.statusLineGone = await run(`!document.querySelector('#status')`);
   // 7c. theme toggle persists
   await run(`document.querySelector('#themeLight').click()`);
   checks.themeLight = await run(`document.documentElement.dataset.theme === 'light' && localStorage.getItem('airlock.theme') === 'light'`);
@@ -171,7 +188,7 @@ app.whenReady().then(async () => {
     && dnd.important === true && dnd.urgent === false && JSON.stringify(checks.afterDndCounts) === '[0,1,0,1]'
     && JSON.stringify(checks.afterDoneCounts) === '[0,0,0,1]' && checks.syncStatus === 'synced'
     && checks.remoteRows.length === 2 && checks.remoteRows.some((r) => r.title === `Smoke ${RUN} do` && r.important && !r.urgent && r.done && r.notes === `note ${RUN}`)
-    && checks.realtimeArrived && checks.tickLingers && checks.tickCompleted && checks.pingOnAdd && checks.mutedTickSilent && checks.themeLight && checks.menuHidesWebOnlyItems && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
+    && checks.realtimeArrived && checks.tickLingers && checks.tickCompleted && checks.pingOnAdd && checks.mutedTickSilent && checks.renameOpensInput && checks.diceSuggests && checks.renameCommitted && checks.renameSynced && checks.renameRealtime && checks.escapeReverts && checks.statusLineGone && checks.themeLight && checks.menuHidesWebOnlyItems && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
     && checks.bobOwnRowScoped && checks.deleteRemovedOnlyBob && checks.signedOutAfterDelete
     && checks.desktopGoogleOpenedBrowser && checks.deepLinkBadCodeRejected && checks.deepLinkSignedIn === 'google-user@example.com' && errors.length === 0;
   console.log(JSON.stringify(checks, null, 2));
