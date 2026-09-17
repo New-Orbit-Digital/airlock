@@ -1,6 +1,6 @@
 {
   "name": "airlock",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Airlock \u2014 catch passing tasks, sort them in an Eisenhower matrix. Syncs across devices.",
   "main": "main.js",
   "scripts": {
@@ -39,6 +39,7 @@
       "icon.png",
       "icon.svg",
       "icon-180.png",
+      "airlock-ping.wav",
       "vendor/**"
     ],
     "win": {

@@ -59,7 +59,8 @@ app.whenReady().then(async () => {
   await sleep(2500);
   checks.stayedLoggedIn = await run(`document.querySelector('#login').hidden`);
 
-  // 3. create tasks via capture
+  // 3. create tasks via capture (spy on audio: each add should ping)
+  await run(`window.__plays = 0; HTMLMediaElement.prototype.play = function () { window.__plays++; return Promise.resolve(); }; true;`);
   const type = async (text, imp, urg) => {
     await run(`document.querySelector('#text').value = ${JSON.stringify(text)};
       document.querySelector('#tImportant').setAttribute('aria-pressed', '${imp}');
@@ -70,6 +71,7 @@ app.whenReady().then(async () => {
   await type(`Smoke ${RUN} do #smoke-${RUN}`, true, true);
   await type(`Smoke ${RUN} eliminate #smoke-${RUN} #home`, false, false);
   checks.hintHiddenAfterAdd = await run(`document.querySelector('#hint').hidden`);
+  checks.pingOnAdd = await run(`window.__plays === 2 && new Audio('airlock-ping.wav').src.endsWith('/airlock-ping.wav')`);
   await run(`[...document.querySelectorAll('#chips .chip')].find(c => c.textContent.startsWith('#smoke-${RUN}')).click()`);
   await sleep(100);
   checks.createdCounts = await counts();           // expect [1,0,0,1]
@@ -109,9 +111,12 @@ app.whenReady().then(async () => {
   for (let i = 0; i < 20; i++) { await sleep(300); rt = await run(`[...document.querySelectorAll('#q3 .task .title')].some(t => t.textContent === 'Realtime ${RUN}')`); if (rt) break; }
   checks.realtimeArrived = rt;
 
-  // 7b. circle tick: click draws the check, card lingers ~1.6s, then the task is done
+  // 7b. circle tick: click draws the check, card lingers ~1.6s, then the task is done. Muted first: no ping.
   await run(`document.querySelector('#showDone').checked = false; document.querySelector('#showDone').dispatchEvent(new Event('change'));`);
+  await run(`document.querySelector('#mute').checked = true; document.querySelector('#mute').dispatchEvent(new Event('change')); window.__plays = 0;`);
   await run(`document.querySelector('#q3 .task .tick').click()`);
+  checks.mutedTickSilent = await run(`window.__plays === 0 && localStorage.getItem('airlock.mute') === '1'`);
+  await run(`document.querySelector('#mute').checked = false; document.querySelector('#mute').dispatchEvent(new Event('change'));`);
   await sleep(400);
   checks.tickLingers = await run(`!!document.querySelector('#q3 .task.leaving .tick.on')`);
   await sleep(1800);
@@ -166,7 +171,7 @@ app.whenReady().then(async () => {
     && dnd.important === true && dnd.urgent === false && JSON.stringify(checks.afterDndCounts) === '[0,1,0,1]'
     && JSON.stringify(checks.afterDoneCounts) === '[0,0,0,1]' && checks.syncStatus === 'synced'
     && checks.remoteRows.length === 2 && checks.remoteRows.some((r) => r.title === `Smoke ${RUN} do` && r.important && !r.urgent && r.done && r.notes === `note ${RUN}`)
-    && checks.realtimeArrived && checks.tickLingers && checks.tickCompleted && checks.themeLight && checks.menuHidesWebOnlyItems && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
+    && checks.realtimeArrived && checks.tickLingers && checks.tickCompleted && checks.pingOnAdd && checks.mutedTickSilent && checks.themeLight && checks.menuHidesWebOnlyItems && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
     && checks.bobOwnRowScoped && checks.deleteRemovedOnlyBob && checks.signedOutAfterDelete
     && checks.desktopGoogleOpenedBrowser && checks.deepLinkBadCodeRejected && checks.deepLinkSignedIn === 'google-user@example.com' && errors.length === 0;
   console.log(JSON.stringify(checks, null, 2));

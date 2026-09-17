@@ -7,6 +7,6 @@ fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(path.join(__dirname, 'site'), out, { recursive: true });
 const app = path.join(out, 'app');
 fs.mkdirSync(path.join(app, 'vendor'), { recursive: true });
-for (const f of ['index.html', 'renderer.js', 'store.js', 'config.js', 'manifest.json', 'sw.js', 'icon.svg', 'icon.png', 'icon-180.png', 'vendor/supabase.js'])
+for (const f of ['index.html', 'renderer.js', 'store.js', 'config.js', 'manifest.json', 'sw.js', 'icon.svg', 'icon.png', 'icon-180.png', 'airlock-ping.wav', 'vendor/supabase.js'])
   fs.copyFileSync(path.join(__dirname, f), path.join(app, f));
 console.log('web/ ready');

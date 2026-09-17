@@ -9,7 +9,7 @@ let editingId = null;
 const $ = (sel) => document.querySelector(sel);
 const el = {
   text: $('#text'), tImportant: $('#tImportant'), tUrgent: $('#tUrgent'), add: $('#add'),
-  chips: $('#chips'), showDone: $('#showDone'), status: $('#status'), sync: $('#sync'),
+  chips: $('#chips'), showDone: $('#showDone'), mute: $('#mute'), status: $('#status'), sync: $('#sync'),
   dlg: $('#dlg'), dTitle: $('#dTitle'), dTags: $('#dTags'), dImportant: $('#dImportant'),
   dUrgent: $('#dUrgent'), dNotes: $('#dNotes'), dMeta: $('#dMeta'), dDelete: $('#dDelete'), dDone: $('#dDone'),
   login: $('#login'), lForm: $('#loginForm'), lError: $('#lError'), googleBtn: $('#googleBtn'), orRow: $('#orRow'),
@@ -137,6 +137,7 @@ function addFromCapture() {
   const { title, tags } = parseCapture(el.text.value);
   if (!title) { el.text.focus(); return; }
   store.create({ title, tags, important: pressed(el.tImportant), urgent: pressed(el.tUrgent) });
+  ping();
   el.text.value = '';
   setPressed(el.tImportant, false); setPressed(el.tUrgent, false);
   el.text.focus();
@@ -151,6 +152,21 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key.toLowerCase() === 'u') { e.preventDefault(); flip(el.tUrgent); }
   if (e.key === '/' && document.activeElement !== el.text) { e.preventDefault(); el.text.focus(); }
 });
+
+// ---------- sound ----------
+// One short ping when a task is added or marked done. Both happen on a click/Enter, so autoplay rules allow it.
+let muted = false;
+const pingAudio = (() => { try { const a = new Audio('airlock-ping.wav'); a.preload = 'auto'; a.volume = 0.6; return a; } catch { return null; } })();
+function ping() {
+  if (muted || !pingAudio) return;
+  try { pingAudio.currentTime = 0; const p = pingAudio.play(); if (p && p.catch) p.catch(() => {}); } catch {}
+}
+function setMuted(on) {
+  muted = !!on; el.mute.checked = muted;
+  try { localStorage.setItem('airlock.mute', muted ? '1' : '0'); } catch {}
+}
+el.mute.addEventListener('change', () => setMuted(el.mute.checked));
+(() => { let m = false; try { m = localStorage.getItem('airlock.mute') === '1'; } catch {} setMuted(m); })();
 
 // ---------- filters ----------
 el.showDone.addEventListener('change', () => { showDone = el.showDone.checked; render(); });
@@ -212,7 +228,7 @@ function taskCard(t) {
     e.stopPropagation();
     if (t.done || card.classList.contains('leaving')) { toggleDone(t); return; }
     // draw the check, let it sit for a beat, then the card fades and the task is marked done
-    cb.classList.add('on'); card.classList.add('leaving');
+    cb.classList.add('on'); card.classList.add('leaving'); ping();
     setTimeout(() => { if (document.body.contains(card)) toggleDone(t); }, 1600);
   });
   const body = document.createElement('div'); body.className = 'body';
@@ -298,6 +314,7 @@ el.dDone.addEventListener('click', () => {
   const t = tasks().find((x) => x.id === editingId);
   if (!t) return;
   saveDialog({ done: !t.done, doneAt: !t.done ? new Date().toISOString() : null });
+  if (!t.done) ping();
   el.dlg.close();
 });
 el.dDelete.addEventListener('click', () => { store.remove(editingId); el.dlg.close(); });
