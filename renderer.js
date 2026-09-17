@@ -9,7 +9,7 @@ let editingId = null;
 const $ = (sel) => document.querySelector(sel);
 const el = {
   text: $('#text'), tImportant: $('#tImportant'), tUrgent: $('#tUrgent'), add: $('#add'),
-  chips: $('#chips'), showDone: $('#showDone'), mute: $('#mute'), status: $('#status'), sync: $('#sync'),
+  chips: $('#chips'), showDone: $('#showDone'), mute: $('#mute'), sync: $('#sync'),
   dlg: $('#dlg'), dTitle: $('#dTitle'), dTags: $('#dTags'), dImportant: $('#dImportant'),
   dUrgent: $('#dUrgent'), dNotes: $('#dNotes'), dMeta: $('#dMeta'), dDelete: $('#dDelete'), dDone: $('#dDone'),
   login: $('#login'), lForm: $('#loginForm'), lError: $('#lError'), googleBtn: $('#googleBtn'), orRow: $('#orRow'),
@@ -212,7 +212,6 @@ function render() {
     }
     for (const t of items) list.appendChild(taskCard(t));
   }
-  el.status.textContent = `${tasks().filter((t) => !t.done).length} open · ${tasks().filter((t) => t.done).length} done`;
   el.hint.hidden = tasks().length > 0 || !store.user;
 }
 
@@ -254,6 +253,69 @@ function taskCard(t) {
 function toggleDone(t) {
   store.update(t.id, { done: !t.done, doneAt: !t.done ? new Date().toISOString() : null });
 }
+
+// ---------- quadrant names (double-click to rename; synced per user) ----------
+const QUAD_DEFAULTS = { q1: 'Do', q2: 'Schedule', q3: 'Delegate', q4: 'Eliminate' };
+const QUAD_IDEAS = {
+  q1: ['Do', 'Act', 'Now', 'Today', 'Execute', 'Handle', 'Tackle', 'Ship', 'Launch', 'Fire', 'Mission critical', 'Front burner'],
+  q2: ['Schedule', 'Plan', 'Chart', 'Book it', 'Invest', 'Build', 'Grow', 'Next up', 'This week', 'Chart the course', 'Deep work', 'Focus'],
+  q3: ['Delegate', 'Automate', 'Hand off', 'Outsource', 'Assign', 'Ask', 'Offload', 'Systemize', 'Ground control', 'Quick hits', 'Batch', 'Interrupts'],
+  q4: ['Eliminate', 'Reconsider', 'Jettison', 'Drop', 'Park', 'Later', 'Maybe', 'Someday', 'Let go', 'Archive', 'Backlog', 'Icebox'],
+};
+const quadName = (q) => store.quadNames[q] || QUAD_DEFAULTS[q];
+function renderQuadNames() {
+  for (const q of Object.keys(QUAD_DEFAULTS)) {
+    const n = document.querySelector(`#${q} h2 .name`);
+    if (!n.classList.contains('editing')) n.textContent = quadName(q);
+  }
+}
+function editQuadName(q) {
+  const n = document.querySelector(`#${q} h2 .name`);
+  if (n.classList.contains('editing')) return;
+  const before = quadName(q);
+  n.classList.add('editing');
+  n.innerHTML = '';
+  const input = document.createElement('input');
+  input.type = 'text'; input.maxLength = 24; input.value = before; input.setAttribute('aria-label', 'Quadrant name');
+  input.autocomplete = 'off'; input.spellcheck = false;
+  const dice = document.createElement('button');
+  dice.type = 'button'; dice.className = 'dice'; dice.title = 'Suggest a name'; dice.setAttribute('aria-label', 'Suggest a name');
+  dice.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>';
+  let done = false;
+  const finish = (commit) => {
+    if (done) return; done = true;
+    const v = input.value.trim().slice(0, 24);
+    n.classList.remove('editing'); n.innerHTML = '';
+    if (commit && v !== before) store.setQuadName(q, v === QUAD_DEFAULTS[q] ? '' : v);
+    renderQuadNames();
+  };
+  // the dice must not blur the input (blur = commit), so act on pointerdown and swallow it
+  dice.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
+  dice.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const pool = QUAD_IDEAS[q].filter((x) => x.toLowerCase() !== input.value.trim().toLowerCase());
+    input.value = pool[Math.floor(Math.random() * pool.length)];
+    input.focus(); input.select();
+  });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    e.stopPropagation();
+  });
+  input.addEventListener('blur', () => setTimeout(() => finish(true), 0));
+  input.addEventListener('click', (e) => e.stopPropagation());
+  n.appendChild(input); n.appendChild(dice);
+  input.focus(); input.select();
+}
+for (const q of Object.keys(QUAD_DEFAULTS)) {
+  const n = document.querySelector(`#${q} h2 .name`);
+  n.addEventListener('dblclick', (e) => { e.preventDefault(); editQuadName(q); });
+  // phones: a double-tap fires dblclick in modern browsers, but be safe and detect it ourselves too
+  let lastTap = 0;
+  n.addEventListener('touchend', (e) => { const t = Date.now(); if (t - lastTap < 350) { e.preventDefault(); editQuadName(q); } lastTap = t; }, { passive: false });
+}
+store.on('prefs', renderQuadNames);
+renderQuadNames();
 
 // ---------- drag & drop between quadrants ----------
 for (const q of Object.keys(QUADS)) {
