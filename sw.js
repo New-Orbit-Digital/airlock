@@ -1,5 +1,5 @@
 // Offline shell cache: app files served cache-first, data always goes to Supabase directly.
-const CACHE = 'airlock-shell-v9';
+const CACHE = 'airlock-shell-v10';
 const SHELL = ['./', 'index.html', 'renderer.js', 'store.js', 'config.js', 'vendor/supabase.js', 'manifest.json', 'icon.svg', 'icon.png', 'icon-180.png', 'airlock-ping.wav'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {

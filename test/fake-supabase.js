@@ -4,7 +4,9 @@
 // .eq/.order/.contains scoped to the signed-in user (emulating RLS), rpc('delete_my_account'),
 // and channel().on().subscribe() with a `__emit` hook so the test can simulate another device.
 (function () {
-  const rows = new Map();          // id -> row
+  const rows = new Map();                       // matrix_tasks
+  const tables = { matrix_tasks: rows, matrix_settings: new Map() };
+  const tbl = (name) => tables[name] || (tables[name] = new Map());
   const users = new Map();         // email -> user id
   const pendingCodes = new Map();  // email -> code
   const CODE = '123456';
@@ -28,18 +30,19 @@
       const out = (() => {
         if (!me()) return { data: null, error: { message: 'not signed in' } };
         // RLS emulation: only the caller's rows are visible/affected
-        const mine = [...rows.values()].filter((r) => r.user_id === me());
+        const store = tbl(table);
+        const mine = [...store.values()].filter((r) => r.user_id === me());
         const match = mine.filter((r) => q._filters.every((f) => f(r)));
         if (q._op === 'select') return { data: match.map((r) => ({ ...r })), error: null };
         if (q._op === 'upsert' || q._op === 'insert') {
           const row = { ...q._row, user_id: me() };
-          if (!row.id) row.id = crypto.randomUUID();
-          const existed = rows.has(row.id);
-          rows.set(row.id, row);
-          channels.forEach((c) => c.__emit({ eventType: existed ? 'UPDATE' : 'INSERT', new: { ...row }, old: {} }));
+          const key = table === 'matrix_settings' ? row.user_id : (row.id || (row.id = crypto.randomUUID()));
+          const existed = store.has(key);
+          store.set(key, row);
+          channels.forEach((c) => c.__emit({ eventType: existed ? 'UPDATE' : 'INSERT', table, new: { ...row }, old: {} }));
           return { data: [row], error: null };
         }
-        for (const r of match) { rows.delete(r.id); channels.forEach((c) => c.__emit({ eventType: 'DELETE', new: {}, old: { id: r.id } })); }
+        for (const r of match) { store.delete(table === 'matrix_settings' ? r.user_id : r.id); channels.forEach((c) => c.__emit({ eventType: 'DELETE', table, new: {}, old: { id: r.id } })); }
         return { data: null, error: null };
       })();
       return Promise.resolve(out).then(res, rej);
@@ -74,21 +77,21 @@
       rpc: async (name) => {
         if (name !== 'delete_my_account') return { data: null, error: { message: 'unknown rpc' } };
         if (!me()) return { data: null, error: { message: 'not signed in' } };
-        for (const [id, r] of rows) if (r.user_id === me()) rows.delete(id);
+        for (const t of Object.values(tables)) for (const [k, r] of t) if (r.user_id === me()) t.delete(k);
         const email = session.user.email;
         users.delete(email);
         return { data: 'account_deleted', error: null };
       },
       channel: () => {
         const ch = { _handlers: [] };
-        ch.on = (_type, _filter, fn) => { ch._handlers.push(fn); return ch; };
+        ch.on = (_type, filter, fn) => { ch._handlers.push({ table: filter && filter.table, fn }); return ch; };
         ch.subscribe = (cb) => { channels.push(ch); setTimeout(() => cb && cb('SUBSCRIBED'), 50); return ch; };
-        ch.__emit = (payload) => ch._handlers.forEach((fn) => fn(payload));
+        ch.__emit = (payload) => ch._handlers.forEach((h) => { if (!h.table || h.table === payload.table) h.fn(payload); });
         return ch;
       },
       removeChannel: (ch) => { const i = channels.indexOf(ch); if (i >= 0) channels.splice(i, 1); },
     };
   }
   window.supabase = { createClient };
-  window.__fakeSupabase = { rows, users, CODE, get session() { return session; } };
+  window.__fakeSupabase = { rows, tables, users, CODE, get session() { return session; } };
 })();

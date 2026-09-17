@@ -16,7 +16,7 @@
   let user = null;
   let channel = null;
   let status = 'offline';  // 'offline' | 'syncing' | 'synced' | 'error' | 'signed-out'
-  const listeners = { change: [], status: [], auth: [] };
+  const listeners = { change: [], status: [], auth: [], prefs: [] };
 
   const emit = (ev, arg) => listeners[ev].forEach((fn) => fn(arg));
   const setStatus = (s) => { status = s; emit('status', s); };
@@ -42,6 +42,31 @@
   }
 
   const persistLocal = () => { writeJSON(CACHE_KEY, tasks); writeJSON(QUEUE_KEY, queue); };
+
+  // ---- per-user settings (quadrant names) — tiny row in matrix_settings, cached locally ----
+  const QUADS_KEY = 'airlock.quads.v1';
+  let quadNames = readJSON(QUADS_KEY, {});
+  let quadNamesUpdatedAt = null;
+  let settingsTimer = null;
+  const applySettingsRow = (r) => {
+    if (!r) return;
+    if (quadNamesUpdatedAt && r.updated_at < quadNamesUpdatedAt) return;   // last write wins
+    quadNames = (r.quad_names && typeof r.quad_names === 'object') ? r.quad_names : {};
+    quadNamesUpdatedAt = r.updated_at;
+    writeJSON(QUADS_KEY, quadNames);
+    emit('prefs', quadNames);
+  };
+  async function pullSettings() {
+    const { data, error } = await sb.from('matrix_settings').select('*').eq('user_id', user.id);
+    if (error) { console.warn('settings pull failed', error.message); return; }
+    if (data && data[0]) applySettingsRow(data[0]);
+  }
+  async function pushSettings() {
+    if (!user) return;
+    const row = { user_id: user.id, quad_names: quadNames, updated_at: quadNamesUpdatedAt };
+    const { error } = await sb.from('matrix_settings').upsert(row, { onConflict: 'user_id' });
+    if (error) { console.warn('settings push failed, will retry', error.message); clearTimeout(settingsTimer); settingsTimer = setTimeout(pushSettings, 15000); }
+  }
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }));
 
@@ -103,6 +128,9 @@
   function subscribe() {
     if (channel) sb.removeChannel(channel);
     channel = sb.channel('matrix_tasks_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matrix_settings' }, (payload) => {
+        if (payload.eventType !== 'DELETE') applySettingsRow(payload.new);
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: cfg.table }, (payload) => {
         if (payload.eventType === 'DELETE') {
           tasks = tasks.filter((t) => t.id !== payload.old.id);
@@ -116,7 +144,7 @@
         emit('change', tasks);
       })
       .subscribe((state) => {
-        if (state === 'SUBSCRIBED') pull();   // re-pull on (re)connect so nothing missed offline is lost
+        if (state === 'SUBSCRIBED') { pull(); pullSettings(); }   // re-pull on (re)connect so nothing missed offline is lost
       });
   }
 
@@ -126,6 +154,15 @@
     get tasks() { return tasks; },
     get status() { return status; },
     get user() { return user; },
+    get quadNames() { return quadNames; },
+    setQuadName(q, name) {
+      const next = { ...quadNames };
+      if (name) next[q] = name; else delete next[q];
+      quadNames = next; quadNamesUpdatedAt = new Date().toISOString();
+      writeJSON(QUADS_KEY, quadNames);
+      emit('prefs', quadNames);
+      pushSettings();
+    },
 
     async init() {
       tasks = readJSON(CACHE_KEY, []);
@@ -177,6 +214,7 @@
     async signOut() {
       await sb.auth.signOut();
       tasks = []; queue = []; persistLocal(); emit('change', tasks);
+      quadNames = {}; quadNamesUpdatedAt = null; writeJSON(QUADS_KEY, quadNames); emit('prefs', quadNames);
     },
     exportJSON() {
       return JSON.stringify({ exportedAt: new Date().toISOString(), app: 'Airlock', tasks }, null, 2);
@@ -185,6 +223,7 @@
       const { data, error } = await sb.rpc('delete_my_account');
       if (error) throw error;
       tasks = []; queue = []; persistLocal(); emit('change', tasks);
+      quadNames = {}; quadNamesUpdatedAt = null; writeJSON(QUADS_KEY, quadNames); emit('prefs', quadNames);
       await sb.auth.signOut();
       return data;
     },
