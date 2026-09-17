@@ -110,7 +110,14 @@
     padding: 10px 12px 6px;
   }
   .quad h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--qc); }
-  .quad h2 span { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .quad h2 .sub { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .quad h2 .name { touch-action: manipulation; cursor: text; border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
+  .quad h2 .name:hover { background: color-mix(in srgb, var(--qc) 12%, transparent); }
+  .quad h2 .name.editing { display: inline-flex; align-items: center; gap: 4px; background: var(--panel-2); border: 1px solid var(--qc); padding: 0 2px 0 6px; }
+  .quad h2 .name.editing input { width: 11ch; max-width: 40vw; background: transparent; border: 0; outline: 0; padding: 2px 0; font: inherit; color: var(--qc); }
+  .quad h2 .name.editing .dice { background: transparent; border: 0; padding: 2px 4px; color: var(--muted); display: inline-flex; border-radius: 4px; }
+  .quad h2 .name.editing .dice:hover { color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); }
+  .quad h2 .name.editing .dice svg { width: 14px; height: 14px; }
   .quad .n { color: var(--muted); font-size: 12px; }
   .quad .list { overflow-y: auto; padding: 0 8px 8px; flex: 1; }
   .quad .empty { color: var(--muted); font-size: 13px; padding: 8px 6px; opacity: .6; }
@@ -261,7 +268,6 @@
     .quad .empty { padding-bottom: 12px; }
     .suggest { max-height: 160px; }
     #filters .label { display: none; }
-    #status { display: none; }
   }
 
   /* ---------- install banner (PWA) ---------- */
@@ -275,7 +281,6 @@
   #installBar button { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel-2); font-size: 12px; }
   #installBar button.primary { background: var(--accent); border-color: var(--accent); color: #0b1424; font-weight: 600; }
 
-  #status { position: fixed; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); right: 12px; font-size: 11px; color: var(--muted); opacity: .7; }
 </style>
 </head>
 <body>
@@ -327,10 +332,10 @@
 <div id="hint" hidden><b>Welcome to Airlock.</b> Type a task above and press Enter. Add <code>#realm</code> tags to sort by area of life (<code>#work</code>, <code>#home</code>…), and flip <b>Important</b> / <b>Urgent</b> before you add — the task lands in the right quadrant automatically. Click a card for notes; drag it to move it.</div>
 
 <div id="matrix">
-  <section class="quad" id="q1"><header><h2>Do <span>urgent · important</span></h2><span class="n"></span></header><div class="list"></div></section>
-  <section class="quad" id="q2"><header><h2>Schedule <span>important · not urgent</span></h2><span class="n"></span></header><div class="list"></div></section>
-  <section class="quad" id="q3"><header><h2>Delegate <span>urgent · not important</span></h2><span class="n"></span></header><div class="list"></div></section>
-  <section class="quad" id="q4"><header><h2>Eliminate <span>neither</span></h2><span class="n"></span></header><div class="list"></div></section>
+  <section class="quad" id="q1"><header><h2><span class="name" data-q="q1" title="Double-click to rename">Do</span> <span class="sub">urgent · important</span></h2><span class="n"></span></header><div class="list"></div></section>
+  <section class="quad" id="q2"><header><h2><span class="name" data-q="q2" title="Double-click to rename">Schedule</span> <span class="sub">important · not urgent</span></h2><span class="n"></span></header><div class="list"></div></section>
+  <section class="quad" id="q3"><header><h2><span class="name" data-q="q3" title="Double-click to rename">Delegate</span> <span class="sub">urgent · not important</span></h2><span class="n"></span></header><div class="list"></div></section>
+  <section class="quad" id="q4"><header><h2><span class="name" data-q="q4" title="Double-click to rename">Eliminate</span> <span class="sub">neither</span></h2><span class="n"></span></header><div class="list"></div></section>
 </div>
 
 <dialog id="dlg">
@@ -353,7 +358,6 @@
   </form>
 </dialog>
 
-<div id="status"></div>
 
 <div id="login" hidden>
   <form id="loginForm">
