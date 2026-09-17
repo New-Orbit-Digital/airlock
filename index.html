@@ -62,6 +62,7 @@
   #capture {
     display: flex; gap: 8px; align-items: center;
     padding: 14px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));   /* iPhone home-screen app: keep clear of the status bar */
   }
   #capture input[type=text] {
     flex: 1; padding: 10px 12px; background: var(--bg);
@@ -185,6 +186,7 @@
   #login {
     position: fixed; inset: 0; z-index: 100; background: var(--bg);
     display: flex; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
   }
   #login[hidden] { display: none; }
   #login form {
@@ -212,7 +214,7 @@
   /* ---------- menu ---------- */
   #menuBtn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); padding: 6px 10px; }
   #menu {
-    position: fixed; right: 16px; top: 110px; z-index: 60; background: var(--panel-2); border: 1px solid var(--border);
+    position: fixed; right: 16px; top: calc(110px + env(safe-area-inset-top, 0px)); z-index: 60; background: var(--panel-2); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 8px; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
     display: flex; flex-direction: column; gap: 6px;
   }
@@ -249,7 +251,8 @@
     /* the page scrolls as one growing list; panels size to their content */
     html, body { height: auto; min-height: 100%; overflow: auto; }
     body { display: block; }
-    #capture { flex-wrap: wrap; padding: 10px; }
+    #capture { flex-wrap: wrap; padding: 10px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+    #matrix { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     #capture input[type=text] { flex-basis: 100%; }
     .toggle kbd { display: none; }
     #matrix { display: block; flex: none; min-height: 0; padding: 10px; }
@@ -272,7 +275,7 @@
   #installBar button { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel-2); font-size: 12px; }
   #installBar button.primary { background: var(--accent); border-color: var(--accent); color: #0b1424; font-weight: 600; }
 
-  #status { position: fixed; bottom: 8px; right: 12px; font-size: 11px; color: var(--muted); opacity: .7; }
+  #status { position: fixed; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); right: 12px; font-size: 11px; color: var(--muted); opacity: .7; }
 </style>
 </head>
 <body>
