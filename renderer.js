@@ -20,6 +20,7 @@ const el = {
   installBar: $('#installBar'), installMsg: $('#installMsg'), installGo: $('#installGo'), installLater: $('#installLater'), installMenu: $('#installMenu'),
   themeDark: $('#themeDark'), themeLight: $('#themeLight'), updateBar: $('#updateBar'), updateMsg: $('#updateMsg'), updateGo: $('#updateGo'), updateLater: $('#updateLater'),
   updateCheck: $('#updateCheck'), updateStatus: $('#updateStatus'),
+  frameClassic: $('#frameClassic'), frameBlocking: $('#frameBlocking'),
 };
 
 // ---------- helpers ----------
@@ -448,6 +449,40 @@ function applyTheme(mode) {
 el.themeDark.addEventListener('click', () => applyTheme('dark'));
 el.themeLight.addEventListener('click', () => applyTheme('light'));
 (() => { let m = 'dark'; try { m = localStorage.getItem('airlock.theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); } catch {} applyTheme(m); })();
+
+// ---------- framing (Important/Urgent vs Blocking/Deadline) ----------
+// Purely a relabeling of the same two flags and the same four quadrants — no data changes,
+// so switching back and forth is free and nothing is lost. Local to this device (not synced).
+const FRAMINGS = {
+  classic: {
+    flagImportant: 'Important', flagUrgent: 'Urgent',
+    subs: { q1: 'urgent · important', q2: 'important · not urgent', q3: 'urgent · not important', q4: 'neither' },
+    hint: 'Type a task above and press Enter. Add <code>#realm</code> tags to sort by area of life (<code>#work</code>, <code>#home</code>…), and flip <b>Important</b> / <b>Urgent</b> before you add — the task lands in the right quadrant automatically. Click a card for notes; drag it to move it.',
+  },
+  blocking: {
+    flagImportant: 'Blocking', flagUrgent: 'Deadline',
+    subs: { q1: 'deadline · blocking', q2: 'blocking · no deadline', q3: 'deadline · not blocking', q4: 'neither' },
+    hint: 'Type a task above and press Enter. Add <code>#realm</code> tags to sort by area of life (<code>#work</code>, <code>#home</code>…), and flip <b>Blocking</b> / <b>Deadline</b> before you add — the task lands in the right quadrant automatically. Click a card for notes; drag it to move it.',
+  },
+};
+function applyFraming(mode) {
+  const key = FRAMINGS[mode] ? mode : 'classic';
+  const f = FRAMINGS[key];
+  el.tImportant.querySelector('.lbl').textContent = f.flagImportant;
+  el.tUrgent.querySelector('.lbl').textContent = f.flagUrgent;
+  el.dImportant.textContent = f.flagImportant;
+  el.dUrgent.textContent = f.flagUrgent;
+  for (const q of Object.keys(f.subs)) {
+    const sub = document.querySelector(`#${q} h2 .sub`);
+    if (sub) sub.textContent = f.subs[q];
+  }
+  el.hint.innerHTML = f.hint;
+  setPressed(el.frameClassic, key === 'classic'); setPressed(el.frameBlocking, key === 'blocking');
+  try { localStorage.setItem('airlock.framing', key); } catch {}
+}
+el.frameClassic.addEventListener('click', () => applyFraming('classic'));
+el.frameBlocking.addEventListener('click', () => applyFraming('blocking'));
+(() => { let m = 'classic'; try { m = localStorage.getItem('airlock.framing') || 'classic'; } catch {} applyFraming(m); })();
 
 // ---------- account menu ----------
 el.menuBtn.addEventListener('click', (e) => { e.stopPropagation(); el.menu.hidden = !el.menu.hidden; });

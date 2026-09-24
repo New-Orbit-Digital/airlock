@@ -287,8 +287,8 @@
 
 <div id="capture">
   <input id="text" type="text" autofocus placeholder='Add a task… use #hashtags for the realm, e.g. "Send Q3 invoices #work"' />
-  <button class="toggle" id="tImportant" aria-pressed="false">Important <kbd>Ctrl+I</kbd></button>
-  <button class="toggle" id="tUrgent" aria-pressed="false">Urgent <kbd>Ctrl+U</kbd></button>
+  <button class="toggle" id="tImportant" aria-pressed="false"><span class="lbl">Important</span> <kbd>Ctrl+I</kbd></button>
+  <button class="toggle" id="tUrgent" aria-pressed="false"><span class="lbl">Urgent</span> <kbd>Ctrl+U</kbd></button>
   <button id="add">Add</button>
 </div>
 
@@ -317,6 +317,10 @@
   <div class="seg" role="group" aria-label="Theme">
     <button type="button" id="themeDark" aria-pressed="true">Dark</button>
     <button type="button" id="themeLight" aria-pressed="false">Light</button>
+  </div>
+  <div class="seg" role="group" aria-label="Framing" title="Classic: Important/Urgent. Blocking: Blocking/Deadline — same tasks, relabeled.">
+    <button type="button" id="frameClassic" aria-pressed="true">Classic</button>
+    <button type="button" id="frameBlocking" aria-pressed="false">Blocking</button>
   </div>
   <label id="startupRow" hidden><input type="checkbox" id="startup" /> Launch at startup</label>
   <button id="updateCheck" hidden>Check for updates</button>

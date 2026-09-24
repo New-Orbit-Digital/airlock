@@ -46,6 +46,12 @@ checks `latest.yml`, downloads silently, then shows a "Restart to update" bar; i
 Then `npm run publish:installer` to refresh the site's download link, and `npm run deploy` for the web/PWA (which updates itself on next open).
 The app is unsigned; electron-updater tolerates that but Windows shows the SmartScreen prompt on first install only.
 
+## Shipping without the PC (GitHub Actions)
+`.github/workflows/deploy.yml` runs on every push to `main`: it deploys the web app to Cloudflare Pages, and if `package.json`'s
+version has no GitHub Release yet it builds the Windows installer on a Windows runner, publishes `vX.Y.Z` (auto-update picks it up),
+uploads the installer to R2 and refreshes the download link. Needs two repo secrets: `CLOUDFLARE_API_TOKEN` (custom token with
+Cloudflare Pages:Edit, Workers Scripts:Edit, Workers R2 Storage:Edit) and `CLOUDFLARE_ACCOUNT_ID`. The manual commands below still work.
+
 ## Web / phone
     npm run deploy            # builds web/ (site/ + app at /app/) and deploys to Cloudflare Pages project "airlock" (airlock-ahd.pages.dev)
     npm run publish:installer # uploads dist/Airlock Setup x.y.z.exe to R2 and deploys the airlock-download worker (see file header for first-time setup)
@@ -59,6 +65,14 @@ Drag-and-drop is mouse-only; on the phone, move a card by opening it and flippin
 
 ## Renaming quadrants
 Double-click (double-tap on phones) a quadrant title. Type a name or hit the dice for a suggestion; Enter or clicking away saves, Esc cancels, clearing it restores the default. Names sync to all your devices (`matrix_settings`, one row per user).
+
+## Framing (Classic / Blocking)
+A toggle in the ⋯ menu that relabels the same two flags and the same four quadrants around a different mental model —
+same task, same quadrant, different words. **Classic**: Important / Urgent. **Blocking**: Blocking (does this hold up
+something or someone downstream?) / Deadline (does this have a date, or do I just need to make time for it?). Nothing
+about how a task is stored or sorted changes — it's a pure relabel of the capture-bar flags, the task-dialog flags, the
+quadrant subtitles, and the first-run hint. Local to this device (`localStorage airlock.framing`, not synced), so you
+can flip it per device without it fighting a synced setting.
 
 ## Account menu (⋯)
 Signed-in email · Launch at startup (desktop) · Export my tasks (JSON) · Sign out · Delete my account (type DELETE) · Privacy · version.
@@ -96,4 +110,5 @@ Guards: title ≤ 500 chars, notes ≤ 20k, ≤ 20 tags, ≤ 20,000 tasks per us
 - v0.6.1 release (2026-09-17): `npm run release` published v0.6.1 directly (no draft); installed 0.6.0 desktop app reported and applied the update (Justin). **Auto-update verified end to end.**
 - v0.6.2 (2026-09-17, web-only fix): iPhone home-screen app — capture bar, menu, login overlay and status line now respect `env(safe-area-inset-*)` (the input was sliding under the status bar with `viewport-fit=cover` + `black-translucent`). SW cache `airlock-shell-v9`. Rendered at 390×844 with a simulated 47px inset and reviewed.
 - v0.6.3 (2026-09-17): quadrant renaming — double-click (or double-tap) a quadrant title to edit it inline; dice button cycles suggestions per quadrant; Enter/click-away commits, Esc reverts, empty restores the default. Names are per user and synced across devices via new table `public.matrix_settings` (RLS, realtime, cleared by `delete_my_account()`), cached in `localStorage airlock.quads.v1`. Removed the bottom-right "x open · x done" line. Smoke test adds: dblclick opens input with current name, dice changes it, Enter commits + writes the settings row, a second client's upsert renames another quadrant live, Esc reverts, `#status` gone. PASS, no console errors. Edit mode rendered at 1100px and reviewed.
+- v0.6.4 (2026-09-24): Framing toggle (⋯ menu) — Classic (Important/Urgent) vs Blocking (Blocking/Deadline), relabeling the capture-bar flags, dialog flags, quadrant subtitles and first-run hint with no change to task data, sorting or quadrant placement. Local-only (`localStorage airlock.framing`), no Supabase migration. SW cache `airlock-shell-v11`. Smoke test adds: switching to Blocking relabels flags (`Blocking`/`Deadline`) and quadrant subtitles (`deadline · blocking` etc.) without changing quadrant counts, persists to `localStorage`, and switching back to Classic restores the original labels. PASS, no console errors.
 - Not yet verified: live Google sign-in on web, live email-code delivery via Resend, the Magic Link template edit, custom-domain deploy.

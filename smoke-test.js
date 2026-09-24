@@ -144,6 +144,16 @@ app.whenReady().then(async () => {
   await run(`document.querySelector('#themeDark').click()`);
   checks.menuHidesWebOnlyItems = await run(`getComputedStyle(document.querySelector('#installMenu')).display === 'none' && getComputedStyle(document.querySelector('#startupRow')).display !== 'none'`);
 
+  // 7e. framing toggle: relabels flags + quadrant subtitles, same tasks/counts, persists locally
+  const beforeFramingCounts = await counts();
+  await run(`document.querySelector('#frameBlocking').click()`);
+  checks.framingRelabelsFlags = await run(`document.querySelector('#tImportant .lbl').textContent === 'Blocking' && document.querySelector('#tUrgent .lbl').textContent === 'Deadline' && document.querySelector('#dImportant').textContent === 'Blocking' && document.querySelector('#dUrgent').textContent === 'Deadline'`);
+  checks.framingRelabelsSub = await run(`document.querySelector('#q1 h2 .sub').textContent === 'deadline · blocking' && document.querySelector('#q4 h2 .sub').textContent === 'neither'`);
+  checks.framingPersists = await run(`localStorage.getItem('airlock.framing') === 'blocking'`);
+  checks.framingKeepsCounts = JSON.stringify(await counts()) === JSON.stringify(beforeFramingCounts);
+  await run(`document.querySelector('#frameClassic').click()`);
+  checks.framingRevertsFlags = await run(`document.querySelector('#tImportant .lbl').textContent === 'Important' && document.querySelector('#q1 h2 .sub').textContent === 'urgent · important'`);
+
   // 8. export contains the tasks
   checks.exportHasTasks = await run(`JSON.parse(window.matrixStore.exportJSON()).tasks.length >= 3`);
 
@@ -188,7 +198,9 @@ app.whenReady().then(async () => {
     && dnd.important === true && dnd.urgent === false && JSON.stringify(checks.afterDndCounts) === '[0,1,0,1]'
     && JSON.stringify(checks.afterDoneCounts) === '[0,0,0,1]' && checks.syncStatus === 'synced'
     && checks.remoteRows.length === 2 && checks.remoteRows.some((r) => r.title === `Smoke ${RUN} do` && r.important && !r.urgent && r.done && r.notes === `note ${RUN}`)
-    && checks.realtimeArrived && checks.tickLingers && checks.tickCompleted && checks.pingOnAdd && checks.mutedTickSilent && checks.renameOpensInput && checks.diceSuggests && checks.renameCommitted && checks.renameSynced && checks.renameRealtime && checks.escapeReverts && checks.statusLineGone && checks.themeLight && checks.menuHidesWebOnlyItems && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
+    && checks.realtimeArrived && checks.tickLingers && checks.tickCompleted && checks.pingOnAdd && checks.mutedTickSilent && checks.renameOpensInput && checks.diceSuggests && checks.renameCommitted && checks.renameSynced && checks.renameRealtime && checks.escapeReverts && checks.statusLineGone && checks.themeLight && checks.menuHidesWebOnlyItems
+    && checks.framingRelabelsFlags && checks.framingRelabelsSub && checks.framingPersists && checks.framingKeepsCounts && checks.framingRevertsFlags
+    && checks.exportHasTasks && checks.loginShownAfterSignOut && checks.bobSeesNothing
     && checks.bobOwnRowScoped && checks.deleteRemovedOnlyBob && checks.signedOutAfterDelete
     && checks.desktopGoogleOpenedBrowser && checks.deepLinkBadCodeRejected && checks.deepLinkSignedIn === 'google-user@example.com' && errors.length === 0;
   console.log(JSON.stringify(checks, null, 2));

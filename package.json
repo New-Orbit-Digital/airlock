@@ -1,6 +1,6 @@
 {
   "name": "airlock",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Airlock — catch passing tasks, sort them in an Eisenhower matrix. Syncs across devices.",
   "main": "main.js",
   "scripts": {
